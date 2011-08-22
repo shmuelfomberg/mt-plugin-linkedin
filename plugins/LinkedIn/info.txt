@@ -1,0 +1,18 @@
+Application Details
+Company:
+
+Fomberg Industries
+
+Application Name:
+
+Movable Type blogging
+
+API Key:
+
+h7rnj3ecjbs9
+
+Secret Key:
+
+N1Pie5VHq8yeZQjL
+
+
