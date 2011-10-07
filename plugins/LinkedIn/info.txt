@@ -16,3 +16,15 @@ Secret Key:
 N1Pie5VHq8yeZQjL
 
 
+The site: https://api.linkedin.com.
+Request token path: /uas/oauth/requestToken
+Access token path: /uas/oauth/accessToken
+SSL is required for all authentication steps.
+Standard Authorization Path
+For sites that integrate LinkedIn as feature: 
+https://www.linkedin.com/uas/oauth/authorize
+
+Login with LinkedIn
+For sites that primarily use LinkedIn for authentication 
+(e.g. by showing users a "Login with LinkedIn" button): 
+https://www.linkedin.com/uas/oauth/authenticate

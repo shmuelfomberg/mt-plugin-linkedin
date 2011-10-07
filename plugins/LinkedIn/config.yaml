@@ -7,9 +7,9 @@ author_link: http://www.sixapart.com/
 version: 1.00
 
 commenter_authenticators:
-    BrowserID:
-        class: BrowserIDCommenters::Auth
-        label: BrowserID
+    LinkedIn:
+        class: LinkedIn::Auth
+        label: LinkedIn
         logo: plugins/BrowserIDCommenters/browserid_logo.png
         logo_small: plugins/BrowserIDCommenters/browserid_logo.png
         login_form: |
@@ -49,4 +49,4 @@ commenter_authenticators:
                 </img></a>
             </div>
         login_form_params: BrowserIDCommenters::Auth::commenter_auth_params
-        condition: BrowserIDCommenters::Auth::return_true
+        condition: LinkedIn::Auth::condition
