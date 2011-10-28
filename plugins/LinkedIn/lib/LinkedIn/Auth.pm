@@ -2,6 +2,8 @@ package LinkedIn::Auth;
 use strict;
 use warnings;
 
+my $Session_Name = "LinkedInOauthPlugin";
+
 sub condition {
     my ($blog, $reason) = @_;
     my %required = (
@@ -30,38 +32,111 @@ sub login {
     my ($app)    = @_;
     my $q        = $app->param;
 
-    require Net::OAuth;
-    require HTTP::Request::Common;
-    my $ua = $app->new_ua( { paranoid => 1 } );
+    my $session_key = $app->make_magic_token;
+    require MT::Session;
+    my $sess = MT::Session->new;
+    $sess->id($session_key);
+    $sess->kind('CR');    # CR == Commenter Registration
+    $sess->name($Session_Name);
+    $sess->start(time);
+    $sess->duration( time + 60 * 60 );
 
-    my $request = Net::OAuth->request("request token")->new(
-        consumer_key => 'h7rnj3ecjbs9',
+    require WWW::LinkedIn;
+    my $li = WWW::LinkedIn->new(
+        consumer_key    => 'h7rnj3ecjbs9',
         consumer_secret => 'N1Pie5VHq8yeZQjL',
-        request_url => 'https://api.linkedin.com/uas/oauth/requestToken',
-        request_method => 'POST',
-        signature_method => 'HMAC-SHA1',
-        timestamp => time(),
-        nonce => 'hsu94j3884jdopsl',
-        callback => __create_return_url($app),
-        protocol_version => $Net::OAuth::PROTOCOL_VERSION_1_0A,
+    );
+    my $token;
+    eval {
+        $token = $li->get_request_token(
+            callback  => __create_return_url($app, $session_key)
+        );
+    };
+    if ($@) {
+        return $app->errtrans("Failed to verify LinkedIn user");
+    }
+
+    print STDERR "Got tokens: |", $token->{token}, "|",  $token->{secret}, "|\n";
+    $sess->set("LinkedInToken", $token->{token});
+    $sess->set("LinkedInSecret", $token->{secret});
+    $sess->save;
+
+    return $app->redirect($token->{url});
+}
+
+sub handle_sign_in {
+    my $class = shift;
+    my ( $app, $auth_type ) = @_;
+    my $q = $app->param;
+
+    require WWW::LinkedIn;
+    my $li = WWW::LinkedIn->new(
+        consumer_key    => 'h7rnj3ecjbs9',
+        consumer_secret => 'N1Pie5VHq8yeZQjL',
     );
 
-    $request->sign;
+    my $session = $app->model('session')->load({
+        id => scalar($q->param('sesskey')),
+        kind => 'CR',
+        name => $Session_Name,
+    });
+    return $app->errtrans("Failed to verify LinkedIn user") 
+        unless $session and ($session->duration() > time);
 
-    my $res = $ua->request(HTTP::Request::Common::POST($request->to_url)); # Post message to the Service Provider
+    my $access_token = $li->get_access_token(
+        verifier              => $q->param('oauth_verifier'), # <--- This is passed to us in the querystring:
+        request_token         => $session->get("LinkedInToken"), # <--- From step 1.
+        request_token_secret  => $session->get("LinkedInSecret"), # <--- From step 1.
+    );
+    $session->remove();
+    $session = undef;
 
-    if ($res->is_success) {
-        print STDERR "Request is success\n";
-        print STDERR Dumper($res);
-        my $response = Net::OAuth->response('request token')->from_post_body($res->content);
-        print STDERR "Got Request Token ", $response->token, "\n";
-        print STDERR "Got Request Token Secret ", $response->token_secret, "\n";
+    print STDERR "Access token: ", Dumper($access_token);
+    return $app->errtrans("Failed to verify LinkedIn user") 
+        unless $access_token->{token};
+
+    # Get the user's own profile:
+    my $profile_xml = $li->request(
+        request_url         => 'https://api.linkedin.com/v1/people/~:(id,first-name,last-name)',
+        access_token        => $access_token->{token},
+        access_token_secret => $access_token->{secret},
+    );
+    my ($li_id) = $profile_xml =~ m!<id>(\w+)</id>!;
+    my ($li_first_name) = $profile_xml =~ m!<first-name>(\w+)</first-name>!;
+    my ($li_last_name ) = $profile_xml =~ m!<last-name>(\w+)</last-name>!;
+    print STDERR "Got user id: |$li_id|\n";
+
+    my $author_class = $app->model('author');
+    my $cmntr = $author_class->load(
+        {   name      => $li_id,
+            type      => $author_class->COMMENTER(),
+            auth_type => $auth_type,
+        }
+    );
+    
+    my $nickname = "$li_last_name $li_first_name";
+    print STDERR "Got user nickname: |$nickname|\n";
+    if (not $cmntr) {
+        $cmntr = $app->make_commenter(
+            name        => $li_id,
+            nickname    => $nickname,
+            auth_type   => $auth_type,
+            external_id => $li_id,
+#            url => "http://www.facebook.com/profile.php?id=$fb_id",
+        );
     }
-    else {
-        print STDERR "Something went wrong\n";
-        print STDERR Dumper($res);
-    }
-    # redurect to https://api.linkedin.com/uas/oauth/authorize? oauth_token=f7868c3a-7336-4662-a6d1-3219fb4650d1
+    
+    print STDERR "Got commenter? ", ($cmntr? "YES":"NO"), "\n";
+    return $app->error("Failed to created commenter")
+        unless $cmntr;
+
+ #   __get_userpic($cmntr);
+
+    $app->make_commenter_session($cmntr) 
+        or return $app->error("Failed to create a session");
+    
+    print STDERR "Done!\n";
+    return $cmntr;
 }
 
 sub commenter_auth_params {
@@ -80,7 +155,7 @@ sub commenter_auth_params {
 }
 
 sub __create_return_url {
-    my $app = shift;
+    my ($app, $session_key) = @_;
     my $q        = $app->param;
     my $cfg = $app->config;
 
@@ -96,6 +171,7 @@ sub __create_return_url {
         "key=LinkedIn",
         "blog_id=$blog_id",
         "static=".MT::Util::encode_url($q->param("static")),
+        "sesskey=$session_key",
     );
 
     if (my $entry_id = $q->param("entry_id")) {
