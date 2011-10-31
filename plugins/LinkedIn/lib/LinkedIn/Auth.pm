@@ -56,7 +56,6 @@ sub login {
         return $app->errtrans("Failed to verify LinkedIn user");
     }
 
-    print STDERR "Got tokens: |", $token->{token}, "|",  $token->{secret}, "|\n";
     $sess->set("LinkedInToken", $token->{token});
     $sess->set("LinkedInSecret", $token->{secret});
     $sess->save;
@@ -91,7 +90,6 @@ sub handle_sign_in {
     $session->remove();
     $session = undef;
 
-    print STDERR "Access token: ", Dumper($access_token);
     return $app->errtrans("Failed to verify LinkedIn user") 
         unless $access_token->{token};
 
@@ -106,8 +104,9 @@ sub handle_sign_in {
     my ($li_last_name ) = $profile_xml =~ m!<last-name>(\w+)</last-name>!;
     my ($li_picture   ) = $profile_xml =~ m!<picture-url>([^<>]*)</picture-url>!;
     my ($li_url       ) = $profile_xml =~ m!<public-profile-url>([^<>]*)</public-profile-url>!;
-    print STDERR "Got user id: |$li_id|\n";
-    print STDERR "Got user XML: ", Dumper($profile_xml), "\n";
+    if (not $li_url) {
+        ($li_url) = $profile_xml =~ m!<site-standard-profile-request>\s*<url>([^<>]*)</url>\s*</site-standard-profile-request>!sm;
+    }
 
     my $author_class = $app->model('author');
     my $cmntr = $author_class->load(
@@ -118,18 +117,16 @@ sub handle_sign_in {
     );
     
     my $nickname = "$li_last_name $li_first_name";
-    print STDERR "Got user nickname: |$nickname|\n";
     if (not $cmntr) {
         $cmntr = $app->make_commenter(
             name        => $li_id,
             nickname    => $nickname,
             auth_type   => $auth_type,
             external_id => $li_id,
-#            url => "http://www.facebook.com/profile.php?id=$fb_id",
+            url => $li_url,
         );
     }
     
-    print STDERR "Got commenter? ", ($cmntr? "YES":"NO"), "\n";
     return $app->error("Failed to created commenter")
         unless $cmntr;
 
@@ -138,7 +135,6 @@ sub handle_sign_in {
     $app->make_commenter_session($cmntr) 
         or return $app->error("Failed to create a session");
     
-    print STDERR "Done!\n";
     return $cmntr;
 }
 
