@@ -1,12 +1,12 @@
-BrowserID Commenters login plugin for Movable Type
+LinkedIn Commenters login plugin for Movable Type
 
 This plugin enables commenters to register to your blog
-using their BrowserID identities
+using their LinkedIn identities
 
 Installation:
 
 As any MT plugin, just copy it over your MT installation.
-then activate 'BrowserID' in the blog settings
+then activate 'LinkedIn' in the blog settings
 
 Written By Shmuel Fomberg, all right reserved
 

@@ -25,7 +25,6 @@ sub condition {
     $$reason = "Please install these Perl modules: ".join(", ", @not_found);
     return 0;
 }
-use Data::Dumper;
 
 sub login {
     my $class    = shift;
