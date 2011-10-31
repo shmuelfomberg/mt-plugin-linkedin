@@ -1,0 +1,13 @@
+BrowserID Commenters login plugin for Movable Type
+
+This plugin enables commenters to register to your blog
+using their BrowserID identities
+
+Installation:
+
+As any MT plugin, just copy it over your MT installation.
+then activate 'BrowserID' in the blog settings
+
+Written By Shmuel Fomberg, all right reserved
+
+License: Perl (Artistic v2)
