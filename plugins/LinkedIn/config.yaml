@@ -10,8 +10,8 @@ commenter_authenticators:
     LinkedIn:
         class: LinkedIn::Auth
         label: LinkedIn
-        logo: plugins/BrowserIDCommenters/browserid_logo.png
-        logo_small: plugins/BrowserIDCommenters/browserid_logo.png
+        logo: plugins/LinkedIn/linkedin-signin.png
+        logo_small: plugins/LinkedIn/linkedin-logo.png
         login_form: |
             <form id="linkedin-signin-form" method="post" action="<mt:var name="script_url">">
                 <input type="hidden" name="__mode"   value="login_external">
@@ -22,7 +22,7 @@ commenter_authenticators:
             </form>
             <div>
                 <a href="#" onclick="document.getElementById('linkedin-signin-form').submit()">
-                    <img src='<mt:var name="static_uri">plugins/FacebookCommenters/login-button.png' alt='Sign in'>
+                    <img src='<mt:var name="static_uri">plugins/LinkedIn/linkedin-signin.png' alt='Sign in'>
                 </img></a>
             </div>
         login_form_params: LinkedIn::Auth::commenter_auth_params
