@@ -97,14 +97,17 @@ sub handle_sign_in {
 
     # Get the user's own profile:
     my $profile_xml = $li->request(
-        request_url         => 'https://api.linkedin.com/v1/people/~:(id,first-name,last-name)',
+        request_url         => 'https://api.linkedin.com/v1/people/~:(id,first-name,last-name,picture-url,public-profile-url,site-standard-profile-request)',
         access_token        => $access_token->{token},
         access_token_secret => $access_token->{secret},
     );
     my ($li_id) = $profile_xml =~ m!<id>(\w+)</id>!;
     my ($li_first_name) = $profile_xml =~ m!<first-name>(\w+)</first-name>!;
     my ($li_last_name ) = $profile_xml =~ m!<last-name>(\w+)</last-name>!;
+    my ($li_picture   ) = $profile_xml =~ m!<picture-url>([^<>]*)</picture-url>!;
+    my ($li_url       ) = $profile_xml =~ m!<public-profile-url>([^<>]*)</public-profile-url>!;
     print STDERR "Got user id: |$li_id|\n";
+    print STDERR "Got user XML: ", Dumper($profile_xml), "\n";
 
     my $author_class = $app->model('author');
     my $cmntr = $author_class->load(
@@ -130,13 +133,50 @@ sub handle_sign_in {
     return $app->error("Failed to created commenter")
         unless $cmntr;
 
- #   __get_userpic($cmntr);
+    __get_userpic($cmntr, $li_picture);
 
     $app->make_commenter_session($cmntr) 
         or return $app->error("Failed to create a session");
     
     print STDERR "Done!\n";
     return $cmntr;
+}
+
+sub __get_userpic {
+    my ($cmntr, $picture_url) = @_;
+    
+    return unless $picture_url;
+
+    if ( my $userpic = $cmntr->userpic ) {
+        require MT::FileMgr;
+        my $fmgr  = MT::FileMgr->new('Local');
+        my $mtime = $fmgr->file_mod_time( $userpic->file_path() );
+        my $INTERVAL = 60 * 60 * 24 * 7;
+        if ( $mtime > time - $INTERVAL ) {
+            # newer than 7 days ago, don't download the userpic
+            return;
+        }
+    }
+
+    require MT::Auth::OpenID;
+
+    if ( my $userpic = MT::Auth::OpenID::_asset_from_url($picture_url) ) {
+        $userpic->tags('@userpic');
+        $userpic->created_by( $cmntr->id );
+        $userpic->save;
+        if ( my $userpic = $cmntr->userpic ) {
+            # Remove the old userpic thumb so the new userpic's will be generated
+            # in its place.
+            my $thumb_file = $cmntr->userpic_file();
+            my $fmgr       = MT::FileMgr->new('Local');
+            if ( $fmgr->exists($thumb_file) ) {
+                $fmgr->delete($thumb_file);
+            }
+            $userpic->remove;
+        }
+        $cmntr->userpic_asset_id( $userpic->id );
+        $cmntr->save;
+    }
 }
 
 sub commenter_auth_params {
