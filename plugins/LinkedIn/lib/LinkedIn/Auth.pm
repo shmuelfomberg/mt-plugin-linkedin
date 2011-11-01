@@ -37,9 +37,21 @@ sub condition {
             push @not_found, "$mod version $ver";
         }
     }
-    return 1 unless @not_found;
-    $$reason = "Please install these Perl modules: ".join(", ", @not_found);
-    return 0;
+
+    if (@not_found) {
+        $$reason = "Please install these Perl modules: ".join(", ", @not_found);
+        return 0;
+    }
+    my $app = MT->instance();
+    my %app_keys = get_secret_keys($app);
+    if (not $app_keys{consumer_key}) {
+        my $plugin = $app->component($PluginKey);
+        $$reason = '<a href="?__mode=cfg_plugins&amp;blog_id=' . $app->blog->id . '">' .
+        $plugin->translate('Set up LinkedIn Commenters plugin')  .
+        '</a>';
+        return 0;
+    }
+    return 1;
 }
 
 sub login {
@@ -232,6 +244,26 @@ sub __create_return_url {
 }
 
 sub check_api_key_secret {
+    my ($cb, $plugin, $data) = @_;
+
+    my $consumer_key = $data->{consumer_key};
+    my $consumer_secret = $data->{consumer_secret};
+
+    require WWW::LinkedIn;
+    my $li = WWW::LinkedIn->new(
+        consumer_key => $consumer_key, 
+        consumer_secret => $consumer_secret,
+    );
+    my $token;
+    my $app = MT->instance;
+    eval {
+        $token = $li->get_request_token(
+            callback  => __create_return_url($app, 'XXXXXX')
+        );
+    };
+    if ($@) {
+        return $app->errtrans("Could not verify this app with LinkedIn");
+    }
     return 1;
 }
 
