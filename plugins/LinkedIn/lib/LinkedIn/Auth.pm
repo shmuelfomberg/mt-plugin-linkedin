@@ -23,12 +23,19 @@ sub get_secret_keys {
 sub condition {
     my ($blog, $reason) = @_;
     my %required = (
-        'Digest::HMAC_SHA1' => '1.01',
-        'URI::Escape' => '3.28',
+        'Carp' => '0',
+        'Crypt::SSLeay' => '0',
         'Class::Accessor' => '0.31',
         'Class::Data::Inheritable' => '0.06',
+        'Digest::HMAC_SHA1' => '1.01',
         'Digest::SHA1' => '2.12',
+        'Digest::MD5' => '0',
         'Encode' => '2.35',
+        'HTTP::Request::Common' => '0',
+        'LWP::UserAgent' => '0',
+        'MIME::Base64' => '0',
+        'Net::OAuth' => '0',
+        'URI::Escape' => '3.28',
     );
     my @not_found;
     while (my ($mod, $ver) = each %required) {
