@@ -217,4 +217,8 @@ sub __create_return_url {
     return $cgi_path . $cfg->CommentScript ."?". join('&', @params);
 }
 
+sub check_api_key_secret {
+    return 1;
+}
+
 1;

@@ -27,3 +27,14 @@ commenter_authenticators:
             </div>
         login_form_params: LinkedIn::Auth::commenter_auth_params
         condition: LinkedIn::Auth::condition
+
+settings:
+    consumer_key:
+        scope: blog
+    consumer_secret:
+        scope: blog
+
+blog_config_template: blog_config_template.tmpl
+
+callbacks:
+    'save_config_filter.LinkedIn': $LinkedIn::LinkedIn::Auth::check_api_key_secret
