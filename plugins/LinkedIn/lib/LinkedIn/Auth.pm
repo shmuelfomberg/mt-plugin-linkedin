@@ -3,6 +3,22 @@ use strict;
 use warnings;
 
 my $Session_Name = "LinkedInOauthPlugin";
+my $PluginKey = 'LinkedIn';
+
+sub instance {
+    my ($app) = @_;
+    $app ||= 'MT';
+    $app->component($PluginKey);
+}
+
+sub get_secret_keys {
+    my ($app) = @_;
+    my $plugin = instance($app);
+    my $blog_id = $app->blog->id;
+    my $consumer_key = $plugin->get_config_value('consumer_key', "blog:$blog_id");
+    my $consumer_secret = $plugin->get_config_value('consumer_secret', "blog:$blog_id");
+    return (consumer_key => $consumer_key, consumer_secret => $consumer_secret);
+}
 
 sub condition {
     my ($blog, $reason) = @_;
@@ -42,8 +58,7 @@ sub login {
 
     require WWW::LinkedIn;
     my $li = WWW::LinkedIn->new(
-        consumer_key    => 'h7rnj3ecjbs9',
-        consumer_secret => 'N1Pie5VHq8yeZQjL',
+        get_secret_keys($app),
     );
     my $token;
     eval {
@@ -69,8 +84,7 @@ sub handle_sign_in {
 
     require WWW::LinkedIn;
     my $li = WWW::LinkedIn->new(
-        consumer_key    => 'h7rnj3ecjbs9',
-        consumer_secret => 'N1Pie5VHq8yeZQjL',
+        get_secret_keys($app),
     );
 
     my $session = $app->model('session')->load({
