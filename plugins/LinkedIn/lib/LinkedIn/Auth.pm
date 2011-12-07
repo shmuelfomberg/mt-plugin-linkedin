@@ -246,8 +246,8 @@ sub __create_return_url {
         $entry_id =~ s/\D//g;
         push @params, "entry_id=$entry_id";
     }
-    
-    return $app->path . $app->config->CommentScript ."?". join('&', @params);
+
+    return $app->base . $app->path . $app->config->CommentScript ."?". join('&', @params);
 }
 
 sub check_api_key_secret {
