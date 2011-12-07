@@ -229,10 +229,6 @@ sub commenter_auth_params {
 sub __create_return_url {
     my ($app, $session_key) = @_;
     my $q        = $app->param;
-    my $cfg = $app->config;
-
-    my $cgi_path = $app->config('CGIPath');
-    $cgi_path .= '/' unless $cgi_path =~ m!/$!;
 
     my $blog_id = $q->param("blog_id");
     $blog_id =~ s/\D//g;
@@ -251,7 +247,7 @@ sub __create_return_url {
         push @params, "entry_id=$entry_id";
     }
     
-    return $cgi_path . $cfg->CommentScript ."?". join('&', @params);
+    return $app->path . $app->config->CommentScript ."?". join('&', @params);
 }
 
 sub check_api_key_secret {
