@@ -274,4 +274,6 @@ sub check_api_key_secret {
     return 1;
 }
 
+sub password_exists { 0 }
+
 1;
