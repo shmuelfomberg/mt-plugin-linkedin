@@ -37,4 +37,4 @@ settings:
 blog_config_template: blog_config_template.tmpl
 
 callbacks:
-    'save_config_filter.LinkedIn': $LinkedIn::LinkedIn::Auth::check_api_key_secret
+    save_config_filter.LinkedIn: $LinkedIn::LinkedIn::Auth::check_api_key_secret
